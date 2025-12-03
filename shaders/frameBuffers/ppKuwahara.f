@@ -4,7 +4,6 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
-const vec2 texelSize = vec2(1.0/400.0, 1.0/300.0);
 
 // The radius for the filter. Kuwahara uses a 5x5 window, so radius is 2.
 const int RADIUS = 2;
@@ -30,6 +29,8 @@ float calculateVariance(vec3 colorSum, vec3 colorSqSum, float count)
 
 void main()
 {
+    vec2 texelSize = 1.0 / textureSize(screenTexture, 0);
+
     // The four quadrants are defined by their top-left corner relative to the center pixel.
     // The standard 5x5 filter uses four overlapping 3x3 regions.
     // The offset of the starting sample in TexCoords space:

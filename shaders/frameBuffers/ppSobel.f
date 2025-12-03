@@ -4,10 +4,10 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
-const vec2 texelSize = vec2(1.0/400.0, 1.0/300.0);
 
 void main()
 {
+    vec2 texelSize = 1.0 / textureSize(screenTexture, 0);
     // --- 1. Define the Sobel Kernels ---
     // Horizontal Kernel (Gx) weights
     float kernel_x[9] = float[](

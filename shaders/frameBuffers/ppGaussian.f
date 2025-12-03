@@ -4,7 +4,6 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
-const vec2 texelSize = vec2(1.0/400.0, 1.0/300.0);
 
 // 3x3 Gaussian Kernel Weights
 // The matrix is:
@@ -19,21 +18,22 @@ const float kernel[9] = float[](
 );
 const float kernel_sum = 16.0;
 
-// Texel offsets for the 3x3 neighborhood
-vec2 offsets[9] = vec2[](
-    vec2(-texelSize.x,  texelSize.y), // Top-Left
-    vec2( 0.0f,          texelSize.y), // Top-Center
-    vec2( texelSize.x,   texelSize.y), // Top-Right
-    vec2(-texelSize.x,   0.0f),        // Center-Left
-    vec2( 0.0f,          0.0f),        // Center-Center
-    vec2( texelSize.x,   0.0f),        // Center-Right
-    vec2(-texelSize.x, -texelSize.y), // Bottom-Left
-    vec2( 0.0f,        -texelSize.y), // Bottom-Center
-    vec2( texelSize.x, -texelSize.y)  // Bottom-Right
-);
-
 void main()
 {
+    vec2 texelSize = 1.0 / textureSize(screenTexture, 0);
+
+    // Texel offsets for the 3x3 neighborhood
+    vec2 offsets[9] = vec2[](
+        vec2(-texelSize.x,  texelSize.y), // Top-Left
+        vec2( 0.0f,          texelSize.y), // Top-Center
+        vec2( texelSize.x,   texelSize.y), // Top-Right
+        vec2(-texelSize.x,   0.0f),        // Center-Left
+        vec2( 0.0f,          0.0f),        // Center-Center
+        vec2( texelSize.x,   0.0f),        // Center-Right
+        vec2(-texelSize.x, -texelSize.y), // Bottom-Left
+        vec2( 0.0f,        -texelSize.y), // Bottom-Center
+        vec2( texelSize.x, -texelSize.y)  // Bottom-Right
+    );
     vec4 finalColor = vec4(0.0);
     
     // Perform the 3x3 convolution

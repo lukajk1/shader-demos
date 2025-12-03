@@ -10,15 +10,11 @@ in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
 
-
-
-const float offset = 1.0 / 300.0;  
-
-
-
 void main()
 
 {
+    vec2 texelSize = 1.0 / textureSize(screenTexture, 0);
+    float offset = texelSize.y;
 
     vec2 offsets[9] = vec2[](
 
