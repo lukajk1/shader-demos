@@ -5,33 +5,52 @@ in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
 
+// Point Light Constants (defined at top of file)
+const vec3 LIGHT_POSITION = vec3(2.0, 3.0, 2.0);
+const vec3 LIGHT_AMBIENT = vec3(0.2, 0.2, 0.2);
+const vec3 LIGHT_DIFFUSE = vec3(0.8, 0.8, 0.8);
+const vec3 LIGHT_SPECULAR = vec3(1.0, 1.0, 1.0);
+const float LIGHT_CONSTANT = 1.0;
+const float LIGHT_LINEAR = 0.09;
+const float LIGHT_QUADRATIC = 0.032;
+
+// Material Constants
+const float MATERIAL_SHININESS = 32.0;
+
 uniform vec3 viewPos;
-uniform vec3 lightPos;
 
 struct Material {
     sampler2D diffuse;
     sampler2D specular;
     sampler2D emission;
     float shininess;
-}; 
+};
 uniform Material material;
 
 struct Light {
-    vec3 position;  
-  
+    vec3 position;
+
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
-	
+
     float constant;
     float linear;
     float quadratic;
-}; 
-
-uniform Light light;  
+};  
 
 void main()
-{    
+{
+    // Create light struct using constants
+    Light light;
+    light.position = LIGHT_POSITION;
+    light.ambient = LIGHT_AMBIENT;
+    light.diffuse = LIGHT_DIFFUSE;
+    light.specular = LIGHT_SPECULAR;
+    light.constant = LIGHT_CONSTANT;
+    light.linear = LIGHT_LINEAR;
+    light.quadratic = LIGHT_QUADRATIC;
+
     // --- 1. Attenuation calculation ---
     float distance    = length(light.position - FragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance +
@@ -41,18 +60,18 @@ void main()
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light.position - FragPos);
 
-    // Ambient
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+    // Ambient (use simple color since we don't have texture)
+    vec3 ambient = light.ambient * vec3(0.5);
 
     // Diffuse
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(0.5);
 
-    // Specular
+    // Specular (Blinn-Phong)
     vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords)); // Using specular map
+    vec3 halfwayDir = normalize(lightDir + viewDir); // Halfway vector between light and view
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), MATERIAL_SHININESS);
+    vec3 specular = light.specular * spec * vec3(0.3);
 
     // --- 3. Apply attenuation and combine results ---
     ambient  *= attenuation;

@@ -21,8 +21,6 @@
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(const char* path);
 
@@ -31,15 +29,16 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 const unsigned int IMGUI_WINDOW_WIDTH = 250;
-const unsigned int IMGUI_WINDOW_HEIGHT = 200;
+const unsigned int IMGUI_WINDOW_HEIGHT = 310;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
-const float radius = 4.0f; // rotation radius
-const float rotationRate = 0.2f; // radians per second
+
+float radius = 4.0f; // rotation radius (adjustable via slider)
+float rotationRate = 0.35f; // radians per second (adjustable via slider)
 
 // timing
 float deltaTime = 0.0f;
@@ -61,8 +60,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
     //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -95,13 +92,23 @@ int main()
     Shader shader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
 
     // Model shader selection system
-    const char* modelShaderNames[] = { "Solid", "Fresnel" };
+    const char* modelShaderNames[] = { "Solid", "Fresnel", "Blinn-Phong" };
     const char* modelShaderPaths[] = {
         "Shaders/model/modelSolid.f",
-        "Shaders/model/modelFresnel.f"
+        "Shaders/model/modelFresnel.f",
+        "Shaders/model/cubePoint.f"
     };
     int currentModelShaderIndex = 1; // Start with Fresnel (index 1)
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
+
+    // Point light constants (passed to all model shaders)
+    glm::vec3 lightPos = glm::vec3(2.0f, 3.0f, 2.0f);
+    glm::vec3 lightAmbient = glm::vec3(0.2f, 0.2f, 0.2f);
+    glm::vec3 lightDiffuse = glm::vec3(0.8f, 0.8f, 0.8f);
+    glm::vec3 lightSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
+    float lightConstant = 1.0f;
+    float lightLinear = 0.09f;
+    float lightQuadratic = 0.032f;
 
     // Model selection system
     const char* modelNames[] = { "Suzanne", "Golem" };
@@ -324,6 +331,16 @@ int main()
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
         modelShader->setMat4("model", modelMatrix);
         modelShader->setVec3("viewPos", camera.Position);
+
+        // Pass point light uniforms (OpenGL ignores uniforms not used by the shader)
+        modelShader->setVec3("light.position", lightPos);
+        modelShader->setVec3("light.ambient", lightAmbient);
+        modelShader->setVec3("light.diffuse", lightDiffuse);
+        modelShader->setVec3("light.specular", lightSpecular);
+        modelShader->setFloat("light.constant", lightConstant);
+        modelShader->setFloat("light.linear", lightLinear);
+        modelShader->setFloat("light.quadratic", lightQuadratic);
+
         ourModel->Draw(*modelShader);
 
         // Switch back to regular shader for cubes and floor
@@ -367,7 +384,7 @@ int main()
         // Shader Selection Window
         ImGui::SetNextWindowSize(ImVec2(IMGUI_WINDOW_WIDTH, IMGUI_WINDOW_HEIGHT), ImGuiCond_Always);
         ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - IMGUI_WINDOW_WIDTH - 20, 20), ImGuiCond_Always);
-        ImGui::Begin("Shader Selection", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::Begin("ShaderDemos", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         // Model selection dropdown
         ImGui::Text("Model");
@@ -411,6 +428,20 @@ int main()
             screenShader->setInt("screenTexture", 0);
             std::cout << "Switched to shader: " << shaderNames[currentShaderIndex] << std::endl;
         }
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Rotation speed slider
+        ImGui::Text("Camera Rotation Speed");
+        ImGui::Spacing();
+        ImGui::SliderFloat("##RotationSpeed", &rotationRate, -1.0f, 1.0f, "%.2f rad/s");
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Rotation radius slider
+        ImGui::Text("Camera Rotation Radius");
+        ImGui::Spacing();
+        ImGui::SliderFloat("##RotationRadius", &radius, 1.0f, 8.0f, "%.1f");
 
         ImGui::End();
 
@@ -468,35 +499,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-}
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
-    //float xpos = static_cast<float>(xposIn);
-    //float ypos = static_cast<float>(yposIn);
-    //if (firstMouse)
-    //{
-    //    lastX = xpos;
-    //    lastY = ypos;
-    //    firstMouse = false;
-    //}
-
-    //float xoffset = xpos - lastX;
-    //float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-    //lastX = xpos;
-    //lastY = ypos;
-
-    //camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 // utility function for loading a 2D texture from file
