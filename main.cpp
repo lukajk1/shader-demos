@@ -30,6 +30,9 @@ unsigned int loadTexture(const char* path);
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
+const unsigned int IMGUI_WINDOW_WIDTH = 350;
+const unsigned int IMGUI_WINDOW_HEIGHT = 150;
+
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = (float)SCR_WIDTH / 2.0;
@@ -44,15 +47,11 @@ float lastFrame = 0.0f;
 
 int main()
 {
-    // glfw: initialize and configure
-    // ------------------------------
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // glfw window creation
-    // --------------------
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ShaderDemos", NULL, NULL);
     if (window == NULL)
     {
@@ -94,12 +93,20 @@ int main()
     // build and compile shaders
     // -------------------------
     Shader shader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
-    Shader modelShader("Shaders/model/model.v", "Shaders/model/model.f");
+
+    // Model shader selection system
+    const char* modelShaderNames[] = { "Solid", "Fresnel" };
+    const char* modelShaderPaths[] = {
+        "Shaders/model/modelSolid.f",
+        "Shaders/model/modelFresnel.f"
+    };
+    int currentModelShaderIndex = 1; // Start with Fresnel (index 1)
+    Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
     // Load model
     Model ourModel("resources/suzanne/suzanne.obj");
 
-    // Shader selection system
+    // Post-processing shader selection system
     const char* shaderNames[] = { "Default", "Invert", "Dithering", "Gaussian Blur", "Kuwahara", "Sharpen", "Sobel", "Worley" };
     const char* shaderPaths[] = {
         "shaders/frameBuffers/ppDefault.f",
@@ -114,6 +121,7 @@ int main()
     int currentShaderIndex = 0;
     Shader* screenShader = new Shader("shaders/frameBuffers/screen.v", shaderPaths[currentShaderIndex]);
 
+#pragma region data
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float cubeVertices[] = {
@@ -180,6 +188,7 @@ int main()
          1.0f, -1.0f,  1.0f, 0.0f,
          1.0f,  1.0f,  1.0f, 1.0f
     };
+#pragma endregion
     // cube VAO
     unsigned int cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
@@ -297,15 +306,15 @@ int main()
         shader.setMat4("projection", projection);
 
         // Render the model at world origin (0, 0, 0)
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
+        modelShader->use();
+        modelShader->setMat4("projection", projection);
+        modelShader->setMat4("view", view);
         glm::mat4 modelMatrix = glm::mat4(1.0f);
         modelMatrix = glm::translate(modelMatrix, glm::vec3(0.0f, 0.2f, 0.0f));
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
-        modelShader.setMat4("model", modelMatrix);
-        modelShader.setVec3("viewPos", camera.Position);
-        ourModel.Draw(modelShader);
+        modelShader->setMat4("model", modelMatrix);
+        modelShader->setVec3("viewPos", camera.Position);
+        ourModel.Draw(*modelShader);
 
         // Switch back to regular shader for cubes and floor
         shader.use();
@@ -345,14 +354,32 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Set window size, position, and flags
-        ImGui::SetNextWindowSize(ImVec2(350, 120), ImGuiCond_Always);
-        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 350 - 20, 20), ImGuiCond_Always);
-        ImGui::Begin("Post-Processing Shader Selection", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        // Shader Selection Window
+        ImGui::SetNextWindowSize(ImVec2(IMGUI_WINDOW_WIDTH, IMGUI_WINDOW_HEIGHT), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - IMGUI_WINDOW_WIDTH - 20, 20), ImGuiCond_Always);
+        ImGui::Begin("Shader Selection", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        // Create dropdown
+        // Model shader dropdown
+        int previousModelShaderIndex = currentModelShaderIndex;
+
+        ImGui::Text("Model Shader");
+        ImGui::Spacing();  
+        if (ImGui::Combo("##ModelShader", &currentModelShaderIndex, modelShaderNames, IM_ARRAYSIZE(modelShaderNames)))
+        {
+            // Shader selection changed, reload the shader
+            delete modelShader;
+            modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
+            std::cout << "Switched to model shader: " << modelShaderNames[currentModelShaderIndex] << std::endl;
+        }
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+
+        // Post-processing shader dropdown
+        ImGui::Text("Post-Processing");
+        ImGui::Spacing();
         int previousShaderIndex = currentShaderIndex;
-        if (ImGui::Combo("Shader Effect", &currentShaderIndex, shaderNames, IM_ARRAYSIZE(shaderNames)))
+        if (ImGui::Combo("##Post-Processing", &currentShaderIndex, shaderNames, IM_ARRAYSIZE(shaderNames)))
         {
             // Shader selection changed, reload the shader
             delete screenShader;
@@ -373,8 +400,6 @@ int main()
         glfwPollEvents();
     }
 
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &planeVAO);
     glDeleteVertexArrays(1, &quadVAO);
@@ -385,6 +410,7 @@ int main()
     glDeleteFramebuffers(1, &framebuffer);
 
     delete screenShader;
+    delete modelShader;
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
