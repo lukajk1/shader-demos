@@ -30,8 +30,8 @@ unsigned int loadTexture(const char* path);
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
-const unsigned int IMGUI_WINDOW_WIDTH = 350;
-const unsigned int IMGUI_WINDOW_HEIGHT = 150;
+const unsigned int IMGUI_WINDOW_WIDTH = 250;
+const unsigned int IMGUI_WINDOW_HEIGHT = 200;
 
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -103,8 +103,16 @@ int main()
     int currentModelShaderIndex = 1; // Start with Fresnel (index 1)
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
+    // Model selection system
+    const char* modelNames[] = { "Suzanne", "Golem" };
+    const char* modelPaths[] = {
+        "resources/suzanne/suzanne.obj",
+        "resources/golem/golem.obj"
+    };
+    int currentModelIndex = 0; // Start with Suzanne (index 0)
+
     // Load model
-    Model ourModel("resources/suzanne/suzanne.obj");
+    Model* ourModel = new Model(modelPaths[currentModelIndex]);
 
     // Post-processing shader selection system
     const char* shaderNames[] = { "Default", "Invert", "Dithering", "Gaussian Blur", "Kuwahara", "Sharpen", "Sobel", "Worley" };
@@ -314,7 +322,7 @@ int main()
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
         modelShader->setMat4("model", modelMatrix);
         modelShader->setVec3("viewPos", camera.Position);
-        ourModel.Draw(*modelShader);
+        ourModel->Draw(*modelShader);
 
         // Switch back to regular shader for cubes and floor
         shader.use();
@@ -359,11 +367,24 @@ int main()
         ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - IMGUI_WINDOW_WIDTH - 20, 20), ImGuiCond_Always);
         ImGui::Begin("Shader Selection", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
+        // Model selection dropdown
+        ImGui::Text("Model");
+        ImGui::Spacing();
+        if (ImGui::Combo("##Model", &currentModelIndex, modelNames, IM_ARRAYSIZE(modelNames)))
+        {
+            // Model selection changed, reload the model
+            delete ourModel;
+            ourModel = new Model(modelPaths[currentModelIndex]);
+            std::cout << "Switched to model: " << modelNames[currentModelIndex] << std::endl;
+        }
+        ImGui::Spacing();
+        ImGui::Spacing();
+
         // Model shader dropdown
         int previousModelShaderIndex = currentModelShaderIndex;
 
         ImGui::Text("Model Shader");
-        ImGui::Spacing();  
+        ImGui::Spacing();
         if (ImGui::Combo("##ModelShader", &currentModelShaderIndex, modelShaderNames, IM_ARRAYSIZE(modelShaderNames)))
         {
             // Shader selection changed, reload the shader
@@ -411,6 +432,7 @@ int main()
 
     delete screenShader;
     delete modelShader;
+    delete ourModel;
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
