@@ -28,8 +28,8 @@ unsigned int loadTexture(const char* path);
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
-const unsigned int IMGUI_WINDOW_WIDTH = 250;
-const unsigned int IMGUI_WINDOW_HEIGHT = 700;
+const unsigned int IMGUI_WINDOW_WIDTH = 180;
+const unsigned int IMGUI_WINDOW_HEIGHT = 600;
 
 // light
 const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.2f, 1.0f);
@@ -76,7 +76,7 @@ int main()
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-    ImGui::StyleColorsLight();
+    //ImGui::StyleColorsLight();
 
     glEnable(GL_DEPTH_TEST);
 
@@ -320,7 +320,7 @@ int main()
         glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 
         // make sure we clear the framebuffer's content
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.13f, 0.13f, 0.13f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Setup common view and projection matrices
