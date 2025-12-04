@@ -17,10 +17,11 @@ const float kernel[9] = float[](
     1.0, 2.0, 1.0
 );
 const float kernel_sum = 16.0;
+const float BLUR_STRENGTH = 5.0; // Increase this for stronger blur
 
 void main()
 {
-    vec2 texelSize = 1.0 / textureSize(screenTexture, 0);
+    vec2 texelSize = BLUR_STRENGTH / textureSize(screenTexture, 0);
 
     // Texel offsets for the 3x3 neighborhood
     vec2 offsets[9] = vec2[](

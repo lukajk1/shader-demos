@@ -17,7 +17,7 @@ const float LIGHT_QUADRATIC = 0.032;
 const float MATERIAL_SHININESS = 32.0;
 
 uniform vec3 localColor;
-const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 1.0); // Light color tint 
+uniform vec3 lightColor; 
 
 // Cell Shading Constants
 const int SHADING_LEVELS = 3; // Number of discrete shading levels
@@ -70,8 +70,8 @@ void main()
     float level = floor(diffuseIntensity / levelSize);
     float cellDiffuse = level * levelSize;
 
-    vec3 ambient = light.ambient * localColor * LIGHT_COLOR;
-    vec3 diffuse = light.diffuse * cellDiffuse * localColor * LIGHT_COLOR;
+    vec3 ambient = light.ambient * localColor * lightColor;
+    vec3 diffuse = light.diffuse * cellDiffuse * localColor * lightColor;
 
     // Specular component (sharp highlight)
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -79,7 +79,7 @@ void main()
 
     // Binary specular highlight (either on or off)
     float cellSpecular = step(SPECULAR_THRESHOLD, specularIntensity);
-    vec3 specular = light.specular * cellSpecular * LIGHT_COLOR;
+    vec3 specular = light.specular * cellSpecular * lightColor;
 
     // --- 4. Edge Detection (Rim Lighting for outlines) ---
     float rimDot = 1.0 - max(dot(viewDir, norm), 0.0);

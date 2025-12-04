@@ -29,7 +29,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 const unsigned int IMGUI_WINDOW_WIDTH = 250;
-const unsigned int IMGUI_WINDOW_HEIGHT = 500;
+const unsigned int IMGUI_WINDOW_HEIGHT = 700;
 
 // light
 const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.2f, 1.0f);
@@ -42,7 +42,7 @@ float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
 float radius = 4.0f; // rotation radius (adjustable via slider)
-float rotationRate = 0.20f; // radians per second (adjustable via slider)
+float rotationRate = 0.035f; // radians per second (adjustable via slider)
 
 // timing
 float deltaTime = 0.0f;
@@ -98,10 +98,13 @@ int main()
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
     // Light cube shader
-    Shader lightShader("shaders/frameBuffers/frameBuffers.v", "shaders/model/flatColor.f");
+    Shader lightShader("shaders/frameBuffers/frameBuffers.v", "shaders/model/light.f");
 
     // Model local color (adjustable via color picker)
     float modelLocalColor[3] = { 0.82f, 0.09f, 0.09f }; // RGB color
+
+    // Light color (adjustable via color picker)
+    float lightColor[3] = { 1.0f, 1.0f, 1.0f }; // RGB color
 
     // Point light constants (passed to all model shaders)
     glm::vec3 lightAmbient = glm::vec3(0.2f, 0.2f, 0.2f);
@@ -334,8 +337,9 @@ int main()
         modelShader->setFloat("light.linear", lightLinear);
         modelShader->setFloat("light.quadratic", lightQuadratic);
 
-        // Pass model local color
+        // Pass model local color and light color
         modelShader->setVec3("localColor", glm::vec3(modelLocalColor[0], modelLocalColor[1], modelLocalColor[2]));
+        modelShader->setVec3("lightColor", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
         modelShader->setVec3("viewPos", camera.Position);
 
         // set matrix uniforms for model
@@ -376,6 +380,7 @@ int main()
         lightShader.use();
         lightShader.setMat4("view", view);
         lightShader.setMat4("projection", projection);
+        lightShader.setVec3("lightColor", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
         modelMat = glm::mat4(1.0f);
         modelMat = glm::translate(modelMat, LIGHT_POSITION);
         modelMat = glm::scale(modelMat, LIGHT_SCALE);
@@ -473,6 +478,13 @@ int main()
         ImGui::Text("Model Color");
         ImGui::Spacing();
         ImGui::ColorPicker3("##ModelColor", modelLocalColor, ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Light color picker
+        ImGui::Text("Light Color");
+        ImGui::Spacing();
+        ImGui::ColorPicker3("##LightColor", lightColor, ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
 
         ImGui::End();
 
