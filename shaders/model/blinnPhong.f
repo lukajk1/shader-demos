@@ -6,7 +6,6 @@ in vec3 FragPos;
 in vec2 TexCoords;
 
 // Point Light Constants (defined at top of file)
-const vec3 LIGHT_POSITION = vec3(2.0, 3.0, 2.0);
 const vec3 LIGHT_AMBIENT = vec3(0.2, 0.2, 0.2);
 const vec3 LIGHT_DIFFUSE = vec3(0.8, 0.8, 0.8);
 const vec3 LIGHT_SPECULAR = vec3(1.0, 1.0, 1.0);
@@ -37,19 +36,11 @@ struct Light {
     float constant;
     float linear;
     float quadratic;
-};  
+};
+uniform Light light;
 
 void main()
 {
-    // Create light struct using constants
-    Light light;
-    light.position = LIGHT_POSITION;
-    light.ambient = LIGHT_AMBIENT;
-    light.diffuse = LIGHT_DIFFUSE;
-    light.specular = LIGHT_SPECULAR;
-    light.constant = LIGHT_CONSTANT;
-    light.linear = LIGHT_LINEAR;
-    light.quadratic = LIGHT_QUADRATIC;
 
     // --- 1. Attenuation calculation ---
     float distance    = length(light.position - FragPos);

@@ -31,6 +31,10 @@ const unsigned int SCR_HEIGHT = 720;
 const unsigned int IMGUI_WINDOW_WIDTH = 250;
 const unsigned int IMGUI_WINDOW_HEIGHT = 310;
 
+// light
+const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.2f, 1.0f);
+const glm::vec3 LIGHT_SCALE = glm::vec3(.25f);
+
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = (float)SCR_WIDTH / 2.0;
@@ -38,7 +42,7 @@ float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
 float radius = 4.0f; // rotation radius (adjustable via slider)
-float rotationRate = 0.35f; // radians per second (adjustable via slider)
+float rotationRate = 0.20f; // radians per second (adjustable via slider)
 
 // timing
 float deltaTime = 0.0f;
@@ -92,17 +96,20 @@ int main()
     Shader shader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
 
     // Model shader selection system
-    const char* modelShaderNames[] = { "Solid", "Fresnel", "Blinn-Phong" };
+    const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Normals", "Cell Shaded" };
     const char* modelShaderPaths[] = {
-        "Shaders/model/modelSolid.f",
+        "Shaders/model/blinnPhong.f",
         "Shaders/model/modelFresnel.f",
-        "Shaders/model/cubePoint.f"
+        "Shaders/model/normals.f",
+        "Shaders/model/cellShading.f"
     };
-    int currentModelShaderIndex = 1; // Start with Fresnel (index 1)
+    int currentModelShaderIndex = 0; // Start with Blinn-Phong (index 0)
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
+    // Light cube shader
+    Shader lightShader("shaders/frameBuffers/frameBuffers.v", "shaders/model/flatColor.f");
+
     // Point light constants (passed to all model shaders)
-    glm::vec3 lightPos = glm::vec3(2.0f, 3.0f, 2.0f);
     glm::vec3 lightAmbient = glm::vec3(0.2f, 0.2f, 0.2f);
     glm::vec3 lightDiffuse = glm::vec3(0.8f, 0.8f, 0.8f);
     glm::vec3 lightSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -111,18 +118,18 @@ int main()
     float lightQuadratic = 0.032f;
 
     // Model selection system
-    const char* modelNames[] = { "Suzanne", "Golem" };
+    const char* modelNames[] = { "Suzanne", "Utah Teapot", "Torus"};
     const char* modelPaths[] = {
         "resources/suzanne/suzanne.obj",
-        "resources/golem/golem.obj"
+        "resources/teapot.obj",
+        "resources/coffee_cup.obj"
     };
     int currentModelIndex = 0; // Start with Suzanne (index 0)
-
     // Load model
     Model* ourModel = new Model(modelPaths[currentModelIndex]);
 
     // Post-processing shader selection system
-    const char* shaderNames[] = { "Default", "Invert", "Dithering", "Gaussian Blur", "Kuwahara", "Sharpen", "Sobel", "Worley" };
+    const char* shaderNames[] = { "None", "Invert", "Dithering", "Gaussian Blur", "Kuwahara", "Sharpen", "Sobel", "Worley" };
     const char* shaderPaths[] = {
         "shaders/frameBuffers/ppDefault.f",
         "shaders/frameBuffers/ppInvert.f",
@@ -316,7 +323,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 modelMat = glm::mat4(1.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         shader.setMat4("view", view);
@@ -333,7 +340,7 @@ int main()
         modelShader->setVec3("viewPos", camera.Position);
 
         // Pass point light uniforms (OpenGL ignores uniforms not used by the shader)
-        modelShader->setVec3("light.position", lightPos);
+        modelShader->setVec3("light.position", LIGHT_POSITION);
         modelShader->setVec3("light.ambient", lightAmbient);
         modelShader->setVec3("light.diffuse", lightDiffuse);
         modelShader->setVec3("light.specular", lightSpecular);
@@ -345,22 +352,32 @@ int main()
 
         // Switch back to regular shader for cubes and floor
         shader.use();
-        model = glm::mat4(1.0f);
+        modelMat = glm::mat4(1.0f);
 
         // cubes
         glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
+        /*glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-        shader.setMat4("model", model);
+        modelMat = glm::translate(modelMat, glm::vec3(-1.0f, 0.0f, -1.0f));
+        shader.setMat4("model", modelMat);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        shader.setMat4("model", model);
+        modelMat = glm::mat4(1.0f);
+        modelMat = glm::translate(modelMat, glm::vec3(2.0f, 0.0f, 0.0f));
+        shader.setMat4("model", modelMat);
+        glDrawArrays(GL_TRIANGLES, 0, 36);*/
+        // Light position cube
+        lightShader.use();
+        lightShader.setMat4("view", view);
+        lightShader.setMat4("projection", projection);
+        modelMat = glm::mat4(1.0f);
+        modelMat = glm::translate(modelMat, LIGHT_POSITION);
+        modelMat = glm::scale(modelMat, LIGHT_SCALE);
+        lightShader.setMat4("model", modelMat);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         // floor
+        shader.use();
         glBindVertexArray(planeVAO);
-        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
         shader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
