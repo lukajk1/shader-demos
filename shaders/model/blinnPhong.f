@@ -20,6 +20,9 @@ uniform vec3 viewPos;
 uniform vec3 localColor;
 uniform vec3 lightColor;
 
+uniform sampler2D texture_diffuse1;
+uniform bool useTexture; // Flag to enable/disable texture
+
 struct Material {
     sampler2D diffuse;
     sampler2D specular;
@@ -53,12 +56,19 @@ void main()
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light.position - FragPos);
 
+    // Base color (either from texture or localColor)
+    vec3 baseColor = localColor;
+    if (useTexture) {
+        vec3 texColor = texture(texture_diffuse1, TexCoords).rgb;
+        baseColor = texColor; // Multiply texture with localColor for tinting
+    }
+	
     // Ambient
-    vec3 ambient = light.ambient * localColor * lightColor;
+    vec3 ambient = light.ambient * baseColor * lightColor;
 
     // Diffuse
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * localColor * lightColor;
+    vec3 diffuse = light.diffuse * diff * baseColor * lightColor;
 
     // Specular (Blinn-Phong)
     vec3 viewDir = normalize(viewPos - FragPos);

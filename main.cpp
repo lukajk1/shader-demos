@@ -84,7 +84,14 @@ int main()
 
     // build and compile shaders
     // -------------------------
-    Shader cubeShader("shaders/model/floor.v", "shaders/model/floor.f");
+
+    // load textures
+    // -------------
+    unsigned int floorTexture = loadTexture("resources/container.jpg");
+    Shader* floorShader = new Shader("shaders/model/floor.v", "shaders/model/blinnPhong.f");
+    floorShader->use();
+    floorShader->setBool("useTexture", true);
+    floorShader->setInt("texture_diffuse1", 0);
 
     // Model shader selection system
     const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Color by Normals", "Cell Shaded" };
@@ -191,14 +198,14 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
     float planeVertices[] = {
-        // positions          // texture Coords 
-         5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-        -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-        -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+        // positions          // normals           // texture Coords
+         5.0f, -0.5f,  5.0f,  0.0f, 1.0f, 0.0f,  2.0f, 0.0f,
+        -5.0f, -0.5f,  5.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f,  0.0f, 1.0f, 0.0f,  0.0f, 2.0f,
 
-         5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-        -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-         5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+         5.0f, -0.5f,  5.0f,  0.0f, 1.0f, 0.0f,  2.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f,  0.0f, 1.0f, 0.0f,  0.0f, 2.0f,
+         5.0f, -0.5f, -5.0f,  0.0f, 1.0f, 0.0f,  2.0f, 2.0f
     };
     float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
         // positions   // texCoords
@@ -230,9 +237,11 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     // screen quad VAO
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
@@ -245,16 +254,8 @@ int main()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
-    // load textures
-    // -------------
-    unsigned int cubeTexture = loadTexture("resources/container.jpg");
-    unsigned int floorTexture = loadTexture("resources/metal.png");
-
     // shader configuration
     // --------------------
-    cubeShader.use();
-    cubeShader.setInt("texture1", 0);
-
     screenShader->use();
     screenShader->setInt("screenTexture", 0);
 
@@ -322,13 +323,9 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        cubeShader.use();
-        glm::mat4 modelMat = glm::mat4(1.0f);
+        // Setup common view and projection matrices
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        cubeShader.setMat4("view", view);
-        cubeShader.setMat4("projection", projection);
-
 
         modelShader->use();
         // Pass point light uniforms (OpenGL ignores uniforms not used by the shader)
@@ -344,6 +341,7 @@ int main()
         modelShader->setVec3("localColor", glm::vec3(modelLocalColor[0], modelLocalColor[1], modelLocalColor[2]));
         modelShader->setVec3("lightColor", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
         modelShader->setVec3("viewPos", camera.Position);
+        modelShader->setBool("useTexture", false); // Set to true if you want to use textures
 
         // set matrix uniforms for model
         modelShader->setMat4("projection", projection);
@@ -363,37 +361,34 @@ int main()
         modelShader->setMat4("model", modelMatrix2);
         ourModel->Draw(*modelShader);
 
-
-        // Switch back to regular shader for cubes and floor
-        cubeShader.use();
-        modelMat = glm::mat4(1.0f);
-
-        // cubes
-        glBindVertexArray(cubeVAO);
-        /*glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        modelMat = glm::translate(modelMat, glm::vec3(-1.0f, 0.0f, -1.0f));
-        shader.setMat4("model", modelMat);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        modelMat = glm::mat4(1.0f);
-        modelMat = glm::translate(modelMat, glm::vec3(2.0f, 0.0f, 0.0f));
-        shader.setMat4("model", modelMat);
-        glDrawArrays(GL_TRIANGLES, 0, 36);*/
         // Light sphere
         lightShader.use();
         lightShader.setMat4("view", view);
         lightShader.setMat4("projection", projection);
         lightShader.setVec3("lightColor", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
-        modelMat = glm::mat4(1.0f);
-        modelMat = glm::translate(modelMat, LIGHT_POSITION);
-        modelMat = glm::scale(modelMat, LIGHT_SCALE);
-        lightShader.setMat4("model", modelMat);
+        glm::mat4 lightModelMat = glm::mat4(1.0f);
+        lightModelMat = glm::translate(lightModelMat, LIGHT_POSITION);
+        lightModelMat = glm::scale(lightModelMat, LIGHT_SCALE);
+        lightShader.setMat4("model", lightModelMat);
         lightModel->Draw(lightShader);
-        // floor
-        cubeShader.use();
+
+        // floor using floorShader with texture
+        floorShader->use();
+        floorShader->setMat4("view", view);
+        floorShader->setMat4("projection", projection);
+        floorShader->setMat4("model", glm::mat4(1.0f));
+        floorShader->setVec3("viewPos", camera.Position);
+        floorShader->setVec3("light.position", LIGHT_POSITION);
+        floorShader->setVec3("light.ambient", lightAmbient);
+        floorShader->setVec3("light.diffuse", lightDiffuse);
+        floorShader->setVec3("light.specular", lightSpecular);
+        floorShader->setFloat("light.constant", lightConstant);
+        floorShader->setFloat("light.linear", lightLinear);
+        floorShader->setFloat("light.quadratic", lightQuadratic);
+        floorShader->setVec3("lightColor", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
         glBindVertexArray(planeVAO);
-        glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        cubeShader.setMat4("model", glm::mat4(1.0f));
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 
