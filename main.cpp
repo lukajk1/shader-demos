@@ -94,7 +94,7 @@ int main()
     floorShader->setInt("texture_diffuse1", 0);
 
     // Model shader selection system
-    const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Color by Normals", "Cell Shaded" };
+    const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "OS Normals", "Cell Shaded" };
     const char* modelShaderPaths[] = {
         "Shaders/model/blinnPhong.f",
         "Shaders/model/fresnel.f",
@@ -461,14 +461,14 @@ int main()
         // Rotation speed slider
         ImGui::Text("Camera Rotation Speed");
         ImGui::Spacing();
-        ImGui::SliderFloat("##RotationSpeed", &rotationRate, -1.0f, 1.0f, "%.2f rad/s");
+        ImGui::SliderFloat("##RotationSpeed", &rotationRate, -0.25f, 0.25f, "%.5f rad/s");
         ImGui::Spacing();
         ImGui::Spacing();
 
         // Rotation radius slider
-        ImGui::Text("Camera Rotation Radius");
+        ImGui::Text("Zoom");
         ImGui::Spacing();
-        ImGui::SliderFloat("##RotationRadius", &radius, 1.0f, 8.0f, "%.1f");
+        ImGui::SliderFloat("##RotationRadius", &radius, 2.0f, 8.0f, "%.1f");
         ImGui::Spacing();
         ImGui::Spacing();
 
