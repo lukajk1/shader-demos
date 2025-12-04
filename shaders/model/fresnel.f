@@ -7,8 +7,8 @@ in vec3 FragPos;
 
 uniform sampler2D texture_diffuse1;
 uniform vec3 viewPos;
+uniform vec3 localColor;
 
-const vec3 LOCAL_COLOR = vec3(.33, .43, 0.25);
 const float R0 = 0.04; // Base reflectivity for non-metals
 
 void main()
@@ -26,7 +26,7 @@ void main()
 
     // Mix base color with reflection color based on Fresnel term
     vec3 reflectionColor = vec3(1.0, 1.0, 1.0);
-    vec3 finalColor = mix(LOCAL_COLOR, reflectionColor, fresnel);
+    vec3 finalColor = mix(localColor, reflectionColor, fresnel);
 
     FragColor = vec4(finalColor, 1.0);
 }

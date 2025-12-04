@@ -16,7 +16,7 @@ const float LIGHT_QUADRATIC = 0.032;
 // Material Constants
 const float MATERIAL_SHININESS = 32.0;
 
-const vec3 LOCAL_COLOR = vec3(0.82, 0.090, 0.090);
+uniform vec3 localColor;
 const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 1.0); // Light color tint 
 
 // Cell Shading Constants
@@ -70,8 +70,8 @@ void main()
     float level = floor(diffuseIntensity / levelSize);
     float cellDiffuse = level * levelSize;
 
-    vec3 ambient = light.ambient * LOCAL_COLOR * LIGHT_COLOR;
-    vec3 diffuse = light.diffuse * cellDiffuse * LOCAL_COLOR * LIGHT_COLOR;
+    vec3 ambient = light.ambient * localColor * LIGHT_COLOR;
+    vec3 diffuse = light.diffuse * cellDiffuse * localColor * LIGHT_COLOR;
 
     // Specular component (sharp highlight)
     vec3 halfwayDir = normalize(lightDir + viewDir);

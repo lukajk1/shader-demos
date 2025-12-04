@@ -29,7 +29,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 const unsigned int IMGUI_WINDOW_WIDTH = 250;
-const unsigned int IMGUI_WINDOW_HEIGHT = 310;
+const unsigned int IMGUI_WINDOW_HEIGHT = 500;
 
 // light
 const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.2f, 1.0f);
@@ -64,12 +64,6 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-    // tell GLFW to capture our mouse
-    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    // glad: load all OpenGL function pointers
-    // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -84,30 +78,30 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
     ImGui::StyleColorsLight();
 
-    // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
-    // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
 
     // build and compile shaders
     // -------------------------
-    Shader shader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
+    Shader cubeShader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
 
     // Model shader selection system
-    const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Normals", "Cell Shaded" };
+    const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Color by Normals", "Cell Shaded" };
     const char* modelShaderPaths[] = {
         "Shaders/model/blinnPhong.f",
-        "Shaders/model/modelFresnel.f",
+        "Shaders/model/fresnel.f",
         "Shaders/model/normals.f",
         "Shaders/model/cellShading.f"
     };
-    int currentModelShaderIndex = 0; // Start with Blinn-Phong (index 0)
+    int currentModelShaderIndex = 0;
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
     // Light cube shader
     Shader lightShader("shaders/frameBuffers/frameBuffers.v", "shaders/model/flatColor.f");
+
+    // Model local color (adjustable via color picker)
+    float modelLocalColor[3] = { 0.82f, 0.09f, 0.09f }; // RGB color
 
     // Point light constants (passed to all model shaders)
     glm::vec3 lightAmbient = glm::vec3(0.2f, 0.2f, 0.2f);
@@ -117,7 +111,7 @@ int main()
     float lightLinear = 0.09f;
     float lightQuadratic = 0.032f;
 
-    // Model selection system
+    // Model selection
     const char* modelNames[] = { "Suzanne", "Utah Teapot", "Torus"};
     const char* modelPaths[] = {
         "resources/suzanne/suzanne.obj",
@@ -252,8 +246,8 @@ int main()
 
     // shader configuration
     // --------------------
-    shader.use();
-    shader.setInt("texture1", 0);
+    cubeShader.use();
+    cubeShader.setInt("texture1", 0);
 
     screenShader->use();
     screenShader->setInt("screenTexture", 0);
@@ -322,23 +316,15 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader.use();
+        cubeShader.use();
         glm::mat4 modelMat = glm::mat4(1.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        shader.setMat4("view", view);
-        shader.setMat4("projection", projection);
+        cubeShader.setMat4("view", view);
+        cubeShader.setMat4("projection", projection);
 
-        // Render the model at world origin (0, 0, 0)
+
         modelShader->use();
-        modelShader->setMat4("projection", projection);
-        modelShader->setMat4("view", view);
-        glm::mat4 modelMatrix = glm::mat4(1.0f);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.0f, 0.2f, 0.0f));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
-        modelShader->setMat4("model", modelMatrix);
-        modelShader->setVec3("viewPos", camera.Position);
-
         // Pass point light uniforms (OpenGL ignores uniforms not used by the shader)
         modelShader->setVec3("light.position", LIGHT_POSITION);
         modelShader->setVec3("light.ambient", lightAmbient);
@@ -348,10 +334,31 @@ int main()
         modelShader->setFloat("light.linear", lightLinear);
         modelShader->setFloat("light.quadratic", lightQuadratic);
 
+        // Pass model local color
+        modelShader->setVec3("localColor", glm::vec3(modelLocalColor[0], modelLocalColor[1], modelLocalColor[2]));
+        modelShader->setVec3("viewPos", camera.Position);
+
+        // set matrix uniforms for model
+        modelShader->setMat4("projection", projection);
+        modelShader->setMat4("view", view);
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.2f, 0.2f, 0.25f));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
+        modelShader->setMat4("model", modelMatrix);
         ourModel->Draw(*modelShader);
 
+        // Second model - at an angle
+        glm::mat4 modelMatrix2 = glm::mat4(1.0f);
+        modelMatrix2 = glm::translate(modelMatrix2, glm::vec3(-0.8f, 0.3f, 0.5f));
+        modelMatrix2 = glm::rotate(modelMatrix2, glm::radians(-75.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix2 = glm::rotate(modelMatrix2, glm::radians(15.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        modelMatrix2 = glm::scale(modelMatrix2, glm::vec3(0.4f));
+        modelShader->setMat4("model", modelMatrix2);
+        ourModel->Draw(*modelShader);
+
+
         // Switch back to regular shader for cubes and floor
-        shader.use();
+        cubeShader.use();
         modelMat = glm::mat4(1.0f);
 
         // cubes
@@ -375,10 +382,10 @@ int main()
         lightShader.setMat4("model", modelMat);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         // floor
-        shader.use();
+        cubeShader.use();
         glBindVertexArray(planeVAO);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        shader.setMat4("model", glm::mat4(1.0f));
+        cubeShader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 
@@ -459,6 +466,13 @@ int main()
         ImGui::Text("Camera Rotation Radius");
         ImGui::Spacing();
         ImGui::SliderFloat("##RotationRadius", &radius, 1.0f, 8.0f, "%.1f");
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Model local color picker
+        ImGui::Text("Model Color");
+        ImGui::Spacing();
+        ImGui::ColorPicker3("##ModelColor", modelLocalColor, ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
 
         ImGui::End();
 

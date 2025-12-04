@@ -17,6 +17,7 @@ const float LIGHT_QUADRATIC = 0.032;
 const float MATERIAL_SHININESS = 32.0;
 
 uniform vec3 viewPos;
+uniform vec3 localColor;
 
 struct Material {
     sampler2D diffuse;
@@ -51,18 +52,18 @@ void main()
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light.position - FragPos);
 
-    // Ambient (use simple color since we don't have texture)
-    vec3 ambient = light.ambient * vec3(0.5);
+    // Ambient
+    vec3 ambient = light.ambient * localColor;
 
     // Diffuse
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * vec3(0.5);
+    vec3 diffuse = light.diffuse * diff * localColor;
 
     // Specular (Blinn-Phong)
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir); // Halfway vector between light and view
     float spec = pow(max(dot(norm, halfwayDir), 0.0), MATERIAL_SHININESS);
-    vec3 specular = light.specular * spec * vec3(0.3);
+    vec3 specular = light.specular * spec * localColor * 0.6;
 
     // --- 3. Apply attenuation and combine results ---
     ambient  *= attenuation;
