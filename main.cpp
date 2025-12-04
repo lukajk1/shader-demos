@@ -84,7 +84,7 @@ int main()
 
     // build and compile shaders
     // -------------------------
-    Shader cubeShader("shaders/frameBuffers/frameBuffers.v", "shaders/frameBuffers/frameBuffers.f");
+    Shader cubeShader("shaders/model/floor.v", "shaders/model/floor.f");
 
     // Model shader selection system
     const char* modelShaderNames[] = { "Blinn-Phong", "Fresnel", "Color by Normals", "Cell Shaded" };
@@ -97,8 +97,8 @@ int main()
     int currentModelShaderIndex = 0;
     Shader* modelShader = new Shader("Shaders/model/model.v", modelShaderPaths[currentModelShaderIndex]);
 
-    // Light cube shader
-    Shader lightShader("shaders/frameBuffers/frameBuffers.v", "shaders/model/light.f");
+    // Light sphere shader
+    Shader lightShader("shaders/model/model.v", "shaders/model/light.f");
 
     // Model local color (adjustable via color picker)
     float modelLocalColor[3] = { 0.82f, 0.09f, 0.09f }; // RGB color
@@ -125,20 +125,23 @@ int main()
     // Load model
     Model* ourModel = new Model(modelPaths[currentModelIndex]);
 
+    // Load light sphere model
+    Model* lightModel = new Model("resources/sphere.obj");
+
     // Post-processing shader selection system
     const char* shaderNames[] = { "None", "Invert", "Dithering", "Gaussian Blur", "Kuwahara", "Sharpen", "Sobel", "Worley" };
     const char* shaderPaths[] = {
-        "shaders/frameBuffers/ppDefault.f",
-        "shaders/frameBuffers/ppInvert.f",
-        "shaders/frameBuffers/ppDithering.f",
-        "shaders/frameBuffers/ppGaussian.f",
-        "shaders/frameBuffers/ppKuwahara.f",
-        "shaders/frameBuffers/ppSharpen.f",
-        "shaders/frameBuffers/ppSobel.f",
-        "shaders/frameBuffers/ppWorley.f",
+        "shaders/postProcessing/ppDefault.f",
+        "shaders/postProcessing/ppInvert.f",
+        "shaders/postProcessing/ppDithering.f",
+        "shaders/postProcessing/ppGaussian.f",
+        "shaders/postProcessing/ppKuwahara.f",
+        "shaders/postProcessing/ppSharpen.f",
+        "shaders/postProcessing/ppSobel.f",
+        "shaders/postProcessing/ppWorley.f",
     };
     int currentShaderIndex = 0;
-    Shader* screenShader = new Shader("shaders/frameBuffers/screen.v", shaderPaths[currentShaderIndex]);
+    Shader* screenShader = new Shader("shaders/postProcessing/screen.v", shaderPaths[currentShaderIndex]);
 
 #pragma region data
     // set up vertex data (and buffer(s)) and configure vertex attributes
@@ -376,7 +379,7 @@ int main()
         modelMat = glm::translate(modelMat, glm::vec3(2.0f, 0.0f, 0.0f));
         shader.setMat4("model", modelMat);
         glDrawArrays(GL_TRIANGLES, 0, 36);*/
-        // Light position cube
+        // Light sphere
         lightShader.use();
         lightShader.setMat4("view", view);
         lightShader.setMat4("projection", projection);
@@ -385,7 +388,7 @@ int main()
         modelMat = glm::translate(modelMat, LIGHT_POSITION);
         modelMat = glm::scale(modelMat, LIGHT_SCALE);
         lightShader.setMat4("model", modelMat);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        lightModel->Draw(lightShader);
         // floor
         cubeShader.use();
         glBindVertexArray(planeVAO);
@@ -452,7 +455,7 @@ int main()
         {
             // Shader selection changed, reload the shader
             delete screenShader;
-            screenShader = new Shader("shaders/frameBuffers/screen.v", shaderPaths[currentShaderIndex]);
+            screenShader = new Shader("shaders/postProcessing/screen.v", shaderPaths[currentShaderIndex]);
             screenShader->use();
             screenShader->setInt("screenTexture", 0);
             std::cout << "Switched to shader: " << shaderNames[currentShaderIndex] << std::endl;
@@ -509,6 +512,7 @@ int main()
     delete screenShader;
     delete modelShader;
     delete ourModel;
+    delete lightModel;
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
