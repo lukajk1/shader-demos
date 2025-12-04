@@ -29,10 +29,10 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 const unsigned int IMGUI_WINDOW_WIDTH = 180;
-const unsigned int IMGUI_WINDOW_HEIGHT = 600;
+const unsigned int IMGUI_WINDOW_HEIGHT = 650;
 
 // light
-const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.2f, 1.0f);
+const glm::vec3 LIGHT_POSITION = glm::vec3(-1.0f, 1.0f, 1.0f);
 const glm::vec3 LIGHT_SCALE = glm::vec3(.25f);
 
 // camera
@@ -43,6 +43,8 @@ bool firstMouse = true;
 
 float radius = 4.0f; // rotation radius (adjustable via slider)
 float rotationRate = 0.035f; // radians per second (adjustable via slider)
+float cameraPosition = 0.0f; // camera position around origin (0-1)
+bool autoSpin = true; // toggle for automatic camera rotation
 
 // timing
 float deltaTime = 0.0f;
@@ -303,8 +305,21 @@ int main()
         processInput(window);
 
         // start camera per frame logic
-        float camX = sin(currentFrame * rotationRate) * radius;
-        float camZ = cos(currentFrame * rotationRate) * radius;
+        float angle;
+        if (autoSpin)
+        {
+            // Auto-spin mode: use time-based rotation
+            angle = currentFrame * rotationRate;
+            cameraPosition = fmod(angle / (2.0f * 3.14159265f), 1.0f); // Update slider to match
+        }
+        else
+        {
+            // Manual mode: use slider position
+            angle = cameraPosition * 2.0f * 3.14159265f; // Convert 0-1 to 0-2π
+        }
+
+        float camX = sin(angle) * radius;
+        float camZ = cos(angle) * radius;
 
         // 1. Set the orbiting position
         camera.Position = glm::vec3(camX, 1.0f, camZ);
@@ -458,12 +473,37 @@ int main()
         ImGui::Spacing();
         ImGui::Spacing();
 
-        // Rotation speed slider
+        // Camera auto-spin toggle
+        ImGui::Text("Camera Auto-Spin");
+        ImGui::Spacing();
+        ImGui::Checkbox("##AutoSpin", &autoSpin);
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Rotation speed slider (only relevant when auto-spin is on)
         ImGui::Text("Camera Rotation Speed");
         ImGui::Spacing();
-        ImGui::SliderFloat("##RotationSpeed", &rotationRate, -0.25f, 0.25f, "%.5f rad/s");
+        ImGui::SliderFloat("##RotationSpeed", &rotationRate, -0.5f, 0.5f, "%.1f rad/s");
         ImGui::Spacing();
         ImGui::Spacing();
+
+        // Camera position slider (only active when auto-spin is off)
+        ImGui::Text("Camera Position");
+        ImGui::Spacing();
+        if (!autoSpin)
+        {
+            ImGui::SliderFloat("##CameraPosition", &cameraPosition, 0.0f, 1.0f, "%.3f");
+        }
+        else
+        {
+            // Display read-only slider when auto-spin is on
+            ImGui::BeginDisabled();
+            ImGui::SliderFloat("##CameraPosition", &cameraPosition, 0.0f, 1.0f, "%.3f");
+            ImGui::EndDisabled();
+        }
+        ImGui::Spacing();
+        ImGui::Spacing();
+
 
         // Rotation radius slider
         ImGui::Text("Zoom");
